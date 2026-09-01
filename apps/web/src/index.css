@@ -1,0 +1,42 @@
+:root {
+  --ink: #100e0c;
+  --ink-2: #1a1612;
+  --panel: #221c16;
+  --line: #3a3026;
+  --amber: #e0a03a;
+  --amber-2: #f3c56b;
+  --cream: #f4ead7;
+  --muted: #b5a48a;
+  --danger: #d46a4c;
+  --ok: #8fbf7a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100%;
+  background: radial-gradient(1200px 500px at 10% -10%, #2a2116 0%, var(--ink) 55%);
+  color: var(--cream);
+  font-family: "Segoe UI", "Iowan Old Style", Georgia, serif;
+}
+
+button,
+textarea,
+select,
+input {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+code,
+.mono {
+  font-family: "Cascadia Mono", "Consolas", ui-monospace, monospace;
+}

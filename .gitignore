@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.env
+.venv/
+venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+apps/api/data/*.json
+*.log
+.DS_Store
+Thumbs.db

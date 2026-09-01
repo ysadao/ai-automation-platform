@@ -1,0 +1,26 @@
+services:
+  api:
+    build: .
+    ports:
+      - "4108:4108"
+    environment:
+      PORT: 4108
+      DATA_DIR: /data
+    volumes:
+      - api-data:/data
+
+  web:
+    image: node:22-alpine
+    working_dir: /web
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 3108"
+    ports:
+      - "3108:3108"
+    volumes:
+      - ./apps/web:/web
+    depends_on:
+      - api
+    environment:
+      API_PROXY_TARGET: http://api:4108
+
+volumes:
+  api-data:
