@@ -6,13 +6,14 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
+from sqlalchemy import text
 from fastapi.staticfiles import StaticFiles
 
 from config import get_settings
-from database import init_db, wait_for_db
+from database import engine, init_db, wait_for_db
 from provider import get_provider
 from routers import auth, tasks, templates, usage, workflows
 from seed import ensure_demo_user
@@ -36,7 +37,7 @@ async def lifespan(app: FastAPI):
         pass
 
 
-app = FastAPI(title="INKWORKS Automation", version="2.0.0", lifespan=lifespan)
+app = FastAPI(title="INKWORKS Automation", version="2.1.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -48,6 +49,24 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def request_context(request: Request, call_next):
+    request_id = request.headers.get("x-request-id") or os.urandom(8).hex()
+    started = asyncio.get_event_loop().time()
+    response = await call_next(request)
+    response.headers["x-request-id"] = request_id
+    response.headers["x-content-type-options"] = "nosniff"
+    response.headers["x-frame-options"] = "DENY"
+    ms = int((asyncio.get_event_loop().time() - started) * 1000)
+    print(
+        '{"level":"info","msg":"http_request","requestId":"%s","method":"%s","path":"%s","status":%s,"ms":%s}'
+        % (request_id, request.method, request.url.path, response.status_code, ms),
+        flush=True,
+    )
+    return response
+
 
 app.include_router(auth.router)
 app.include_router(tasks.router)
@@ -65,6 +84,19 @@ def health() -> dict[str, Any]:
         "provider": provider.model,
         "openaiConfigured": bool(os.environ.get("OPENAI_API_KEY")),
     }
+
+
+@app.get("/api/ready")
+async def ready() -> JSONResponse:
+    try:
+        async with engine.connect() as conn:
+            await conn.execute(text("SELECT 1"))
+        return JSONResponse({"status": "ready", "db": "up", "service": "ai-automation-platform"})
+    except Exception:
+        return JSONResponse(
+            {"status": "not_ready", "db": "down", "service": "ai-automation-platform"},
+            status_code=503,
+        )
 
 
 def _static_dir() -> Path:

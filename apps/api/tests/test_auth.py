@@ -12,6 +12,14 @@ def test_health_mock_provider(client) -> None:
     assert body["openaiConfigured"] is False
 
 
+def test_ready_and_request_id(client) -> None:
+    ready = client.get("/api/ready")
+    assert ready.status_code == 200
+    assert ready.json()["status"] == "ready"
+    health = client.get("/api/health", headers={"x-request-id": "ink-review-1"})
+    assert health.headers["x-request-id"] == "ink-review-1"
+
+
 def test_register_login_me(client) -> None:
     created = register_user(client)
     assert created["access_token"]

@@ -2,6 +2,8 @@
 
 Portfolio / reference implementation of an **operator desk** for prompt templates, multi-step workflows, and a background worker. Completions default to a deterministic `MockAIProvider` (no paid API). Persistence is **PostgreSQL**. The FastAPI process serves the Vite SPA on **port 3108**.
 
+`GET /api/ready` pings Postgres. `GET /docs` is FastAPI OpenAPI. Responses include `x-request-id`. This demonstrates workflow/auth patterns; it is not a production LLM platform.
+
 No git history is faked. The code is original.
 
 ## Demo login
