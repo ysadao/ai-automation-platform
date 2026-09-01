@@ -2,16 +2,18 @@ from __future__ import annotations
 
 import hashlib
 import os
-from typing import Any
+from typing import Any, Protocol
+
+
+class Provider(Protocol):
+    model: str
+
+    def complete(self, prompt: str) -> dict[str, Any]:
+        ...
 
 
 class MockAIProvider:
-    """Deterministic stand-in for a hosted LLM. Never calls the network.
-
-    A future OpenAIProvider can be selected when OPENAI_API_KEY is set;
-    this portfolio build always returns mock completions so tests and demos
-    stay offline and repeatable.
-    """
+    """Deterministic stand-in for a hosted LLM. Never calls the network."""
 
     model = "mock-ink-1"
 
@@ -33,6 +35,41 @@ class MockAIProvider:
         }
 
 
-def get_provider() -> MockAIProvider:
-    _ = os.environ.get("OPENAI_API_KEY")
+class OpenAIProvider:
+    """Live OpenAI chat completions. Instantiated only when OPENAI_API_KEY is set."""
+
+    model = "gpt-4o-mini"
+
+    def __init__(self, api_key: str) -> None:
+        self.api_key = api_key
+
+    def complete(self, prompt: str) -> dict[str, Any]:
+        import httpx
+
+        response = httpx.post(
+            "https://api.openai.com/v1/chat/completions",
+            headers={"Authorization": f"Bearer {self.api_key}"},
+            json={
+                "model": self.model,
+                "messages": [{"role": "user", "content": prompt}],
+            },
+            timeout=30.0,
+        )
+        response.raise_for_status()
+        data = response.json()
+        text = data["choices"][0]["message"]["content"]
+        usage = data.get("usage") or {}
+        return {
+            "text": text,
+            "tokensIn": int(usage.get("prompt_tokens") or 0),
+            "tokensOut": int(usage.get("completion_tokens") or 0),
+            "model": data.get("model") or self.model,
+            "digest": None,
+        }
+
+
+def get_provider() -> Provider:
+    key = os.environ.get("OPENAI_API_KEY") or ""
+    if key.strip():
+        return OpenAIProvider(api_key=key.strip())
     return MockAIProvider()
